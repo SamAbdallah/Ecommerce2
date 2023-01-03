@@ -29,17 +29,14 @@ const itemSchema = new mongoose.Schema({
         trim:true,
     },
 
-    // itemOwner:{
-    //     type:Schema.Types.ObjectId,
-    //     ref:'User'
-   
-    // }
-
     itemOwner:{
+       
+       type:Schema.Types.ObjectId,
+       ref:'User'
         
-        type:String
     },
 
+  
     itemType:{
         type:String
     }

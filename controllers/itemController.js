@@ -4,12 +4,13 @@ const item=require("../models/itemsModel")
 exports.addItem=async(req,res)=>{
    
         
-        const itemOwner=await User.findOne({itemOwner:req.body.itemOwner})
+        const itemOwner=await User.findById({_id:req.body.itemOwner}) //userName:Model/req.body... in postman
         const currentUserType=itemOwner.type
+        console.log("///",itemOwner)
         console.log(currentUserType)
-        // if(currentUserType!=="admin"){
-        //             return res.status(404).json({message:"You are not an admin, you are not allowed to add items"})
-        //         }   
+        if(currentUserType!=="admin"){
+                    return res.status(404).json({message:"You are not an admin, you are not allowed to add items"})
+                }   
         const newItem=await item.create({
 
         itemName:req.body.itemName, 
@@ -20,7 +21,7 @@ exports.addItem=async(req,res)=>{
         itemType:req.body.itemType,
     })
 
-    await itemOwner.updateOne({$push:{items:newItem}})
+    await itemOwner.updateOne({$push:{items:newItem._id}})
 
 
 
@@ -36,16 +37,21 @@ exports.addItem=async(req,res)=>{
 
  exports.deleteItem=async(req,res)=>{   
  const currentUser=await User.findOne({email:req.body.email})
- const currentItem=req.body.itemName
  const currentUserType=currentUser.type
-        // if(currentUserType!=="admin"){
-        //      return res.status(404).json({message:"You are not an admin, you are not allowed to delete items"})
-        //  }   
+        if(currentUserType!=="admin"){
+             return res.status(404).json({message:"You are not an admin, you are not allowed to delete items"})
+         }   
+        //  console.log(currentItem)
+            try{
+             await item.findByIdAndDelete(req.body.itemID)
+             await currentUser.updateOne({$pull:{items:req.body.itemID}})
 
-             await item.findByIdAndDelete(req.params.id)
-            //  await currentUser.updateOne({$pull:{items:currentItem}})
-             return res.status(201).json({message:"item deleted successfully",data:{currentItem}})
-    
+            
+             return res.status(201).json({message:"item deleted successfully",data:{currentUser}})
+            }
+            catch(err){
+                console.log(err)
+            }
   
 
         }
@@ -53,16 +59,21 @@ exports.addItem=async(req,res)=>{
 
  exports.buyItem=async(req,res)=>{
     const currentUser=await User.findOne({email:req.body.email})
-    const currentItem=req.body.itemName
-    const itemPrice=req.body.itemPrice
+    const currentUserBalance=currentUser.balance
+    const currentItem=req.body.itemID
+    const currentItemInfo=await item.findOne({_id:currentItem})
+    const itemPrice=currentItemInfo.itemPrice
     const currentUserType=currentUser.type
            if(currentUserType!=="customer"){
                 return res.status(404).json({message:"You are not a customer, you are not allowed to pruchase items"})
             }   
 
-            
-                await currentUser.updateOne({$push:{items:currentItem}})
-                await currentUser.updateOne({$push:{balance:itemPrice}})
+            const newBalance=currentUserBalance+itemPrice
+            await currentUser.updateOne({$push:{items:currentItem}})
+            await currentUser.updateOne({balance:newBalance})
+
+            return res.status(201).json({message:"item bought successfully!"})
+                // await currentUser.updateOne({$push:{balance:itemPrice}})
     
 
         }
@@ -70,17 +81,20 @@ exports.addItem=async(req,res)=>{
  
         exports.removeItem=async(req,res)=>{
             const currentUser=await User.findOne({email:req.body.email})
-            const currentItem=req.body.itemName
-            const itemPrice=req.body.itemPrice
+            const currentUserBalance=currentUser.balance
+            const currentItem=req.body.itemID
+            const currentItemInfo=await item.findOne({_id:currentItem})
+            const itemPrice=currentItemInfo.itemPrice
             const currentUserType=currentUser.type
                    if(currentUserType!=="customer"){
                         return res.status(404).json({message:"You are not a customer, you are not allowed to pruchase items"})
                     }   
         
-                    
-                        await currentUser.updateOne({$pull:{items:currentItem}})
-                        await currentUser.updateOne({$pull:{balance:itemPrice}})
-                    
+                    const newBalance=currentUserBalance-itemPrice
+                    await currentUser.updateOne({$pull:{items:currentItem}})
+                    await currentUser.updateOne({balance:newBalance})
+        
+                    return res.status(201).json({message:"item removed successfully!"})
         
                    
         
